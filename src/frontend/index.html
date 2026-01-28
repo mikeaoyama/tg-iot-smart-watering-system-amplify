@@ -51,37 +51,95 @@
 
   <!-- Modal: Criar Dispositivo -->
   <div class="modal fade" id="createDeviceModal" tabindex="-1">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-lg">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title">Novo Dispositivo</h5>
+          <h5 class="modal-title">Novo Dispositivo - Raspberry Pi 3 B+</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body">
           <form id="createDeviceForm">
+            <!-- Informações Básicas -->
+            <h6 class="text-success mb-3"><i class="fas fa-info-circle"></i> Informações Básicas</h6>
+            
             <div class="mb-3">
               <label class="form-label">ID do Dispositivo *</label>
               <input type="text" class="form-control" name="device_id" required placeholder="Ex: rasp_pi_01">
-              <small class="text-muted">Identificador único</small>
+              <small class="text-muted">Identificador único do Raspberry Pi</small>
             </div>
+            
             <div class="mb-3">
-              <label class="form-label">Nome *</label>
-              <input type="text" class="form-control" name="device_name" required placeholder="Ex: Estufa A">
+              <label class="form-label">Nome do Dispositivo *</label>
+              <input type="text" class="form-control" name="device_name" required placeholder="Ex: Estufa Principal">
             </div>
+            
             <div class="mb-3">
               <label class="form-label">Localização</label>
               <input type="text" class="form-control" name="location" placeholder="Ex: Estufa A - Setor 1">
             </div>
+
             <div class="mb-3">
-              <label class="form-label">Threshold de Umidade (%)</label>
-              <input type="number" class="form-control" name="threshold" min="0" max="100" value="30">
+              <label class="form-label">Descrição</label>
+              <textarea class="form-control" name="description" rows="2" placeholder="Ex: Raspberry Pi com sensor de umidade do solo"></textarea>
+            </div>
+
+            <hr>
+
+            <!-- Sensores -->
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h6 class="text-success mb-0"><i class="fas fa-microchip"></i> Sensores</h6>
+              <button type="button" class="btn btn-sm btn-outline-success" onclick="addSensor()">
+                <i class="fas fa-plus"></i> Adicionar Sensor
+              </button>
+            </div>
+            
+            <div id="sensorsContainer">
+              <!-- Sensores serão adicionados aqui dinamicamente -->
+            </div>
+
+            <hr>
+
+            <!-- Atuadores -->
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h6 class="text-success mb-0"><i class="fas fa-cogs"></i> Atuadores</h6>
+              <button type="button" class="btn btn-sm btn-outline-success" onclick="addActuator()">
+                <i class="fas fa-plus"></i> Adicionar Atuador
+              </button>
+            </div>
+            
+            <div id="actuatorsContainer">
+              <!-- Atuadores serão adicionados aqui dinamicamente -->
+            </div>
+
+            <hr>
+
+            <!-- Configurações -->
+            <h6 class="text-success mb-3"><i class="fas fa-sliders-h"></i> Configurações</h6>
+            
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Threshold de Umidade (%)</label>
+                <input type="number" class="form-control" name="threshold" min="0" max="100" value="30">
+              </div>
+              
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Intervalo de Amostragem (segundos)</label>
+                <input type="number" class="form-control" name="sampling_interval" min="1" value="10">
+              </div>
+            </div>
+
+            <div class="mb-3 form-check">
+              <input type="checkbox" class="form-check-input" name="auto_mode" id="autoMode" checked>
+              <label class="form-check-label" for="autoMode">
+                Ativar Modo Automático
+              </label>
             </div>
           </form>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
           <button type="button" class="btn btn-success" onclick="createDevice()">
-            <i class="fas fa-save"></i> Criar
+            <i class="fas fa-save"></i> Criar Dispositivo
           </button>
         </div>
       </div>
@@ -93,27 +151,26 @@
     <div class="modal-dialog modal-lg">
       <div class="modal-content">
         <div class="modal-header bg-warning text-dark">
-          <h5 class="modal-title">
-            <i class="fas fa-exclamation-triangle"></i> Salve os Certificados!
-          </h5>
+          <h5 class="modal-title"><i class="fas fa-key"></i> Certificados do Dispositivo</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body">
           <div class="alert alert-warning">
-            <strong>Atenção!</strong> Estes certificados serão exibidos apenas uma vez. Salve-os agora!
+            <i class="fas fa-exclamation-triangle"></i> 
+            <strong>IMPORTANTE!</strong> Salve estes certificados em um local seguro. Você não poderá recuperá-los depois.
           </div>
           
           <div class="mb-3">
-            <label class="form-label fw-bold">Certificate PEM:</label>
-            <textarea id="certificatePem" class="form-control font-monospace" rows="8" readonly></textarea>
+            <label class="form-label fw-bold">Certificado (certificate.pem)</label>
+            <textarea class="form-control font-monospace" id="certificatePem" rows="8" readonly></textarea>
             <button class="btn btn-sm btn-outline-primary mt-2" onclick="copyToClipboard('certificatePem')">
               <i class="fas fa-copy"></i> Copiar
             </button>
           </div>
-
+          
           <div class="mb-3">
-            <label class="form-label fw-bold">Private Key:</label>
-            <textarea id="privateKey" class="form-control font-monospace" rows="8" readonly></textarea>
+            <label class="form-label fw-bold">Chave Privada (private.key)</label>
+            <textarea class="form-control font-monospace" id="privateKey" rows="8" readonly></textarea>
             <button class="btn btn-sm btn-outline-primary mt-2" onclick="copyToClipboard('privateKey')">
               <i class="fas fa-copy"></i> Copiar
             </button>
@@ -132,9 +189,131 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   
   <script>
-    // home.js inline (pode mover para arquivo separado depois)
+    // Contadores para IDs únicos
+    let sensorCount = 0
+    let actuatorCount = 0
     let devices = []
 
+    // Adicionar Sensor
+    function addSensor() {
+      sensorCount++
+      const sensorHtml = `
+        <div class="card mb-3 sensor-item" id="sensor-${sensorCount}">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <h6 class="mb-0">Sensor #${sensorCount}</h6>
+              <button type="button" class="btn btn-sm btn-danger" onclick="removeSensor(${sensorCount})">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+            
+            <div class="row">
+              <div class="col-md-6 mb-2">
+                <label class="form-label">ID do Sensor *</label>
+                <input type="text" class="form-control" name="sensor_id_${sensorCount}" required placeholder="Ex: soil_01">
+              </div>
+              <div class="col-md-6 mb-2">
+                <label class="form-label">Nome do Sensor *</label>
+                <input type="text" class="form-control" name="sensor_name_${sensorCount}" required placeholder="Ex: Sensor Tomate">
+              </div>
+            </div>
+            
+            <div class="row">
+              <div class="col-md-4 mb-2">
+                <label class="form-label">Tipo *</label>
+                <select class="form-select" name="sensor_type_${sensorCount}" required>
+                  <option value="moisture">Umidade do Solo</option>
+                  <option value="temperature">Temperatura</option>
+                  <option value="humidity">Umidade do Ar</option>
+                </select>
+              </div>
+              <div class="col-md-4 mb-2">
+                <label class="form-label">Pino *</label>
+                <input type="text" class="form-control" name="sensor_pin_${sensorCount}" required placeholder="Ex: ADS.P0">
+                <small class="text-muted">Ex: ADS.P0, ADS.P1, GPIO17</small>
+              </div>
+              <div class="col-md-4 mb-2">
+                <label class="form-label">Threshold (%)</label>
+                <input type="number" class="form-control" name="sensor_threshold_${sensorCount}" min="0" max="100" value="30">
+              </div>
+            </div>
+          </div>
+        </div>
+      `
+      document.getElementById('sensorsContainer').insertAdjacentHTML('beforeend', sensorHtml)
+    }
+
+    // Remover Sensor
+    function removeSensor(id) {
+      document.getElementById(`sensor-${id}`).remove()
+    }
+
+    // Adicionar Atuador
+    function addActuator() {
+      actuatorCount++
+      
+      // Coletar IDs dos sensores disponíveis
+      const sensorOptions = Array.from(document.querySelectorAll('[name^="sensor_id_"]'))
+        .map(input => input.value)
+        .filter(val => val.trim() !== '')
+        .map(id => `<option value="${id}">${id}</option>`)
+        .join('')
+
+      const actuatorHtml = `
+        <div class="card mb-3 actuator-item" id="actuator-${actuatorCount}">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <h6 class="mb-0">Atuador #${actuatorCount}</h6>
+              <button type="button" class="btn btn-sm btn-danger" onclick="removeActuator(${actuatorCount})">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+            
+            <div class="row">
+              <div class="col-md-6 mb-2">
+                <label class="form-label">ID do Atuador *</label>
+                <input type="text" class="form-control" name="actuator_id_${actuatorCount}" required placeholder="Ex: valve_01">
+              </div>
+              <div class="col-md-6 mb-2">
+                <label class="form-label">Nome do Atuador *</label>
+                <input type="text" class="form-control" name="actuator_name_${actuatorCount}" required placeholder="Ex: Válvula Tomate">
+              </div>
+            </div>
+            
+            <div class="row">
+              <div class="col-md-4 mb-2">
+                <label class="form-label">Tipo *</label>
+                <select class="form-select" name="actuator_type_${actuatorCount}" required>
+                  <option value="solenoid_valve">Válvula Solenoide</option>
+                  <option value="pump">Bomba d'água</option>
+                  <option value="relay">Relé</option>
+                </select>
+              </div>
+              <div class="col-md-4 mb-2">
+                <label class="form-label">GPIO Pin *</label>
+                <input type="number" class="form-control" name="actuator_gpio_${actuatorCount}" required placeholder="Ex: 17" min="1" max="27">
+                <small class="text-muted">GPIO do Raspberry Pi (1-27)</small>
+              </div>
+              <div class="col-md-4 mb-2">
+                <label class="form-label">Sensor Vinculado</label>
+                <select class="form-select" name="actuator_linked_sensor_${actuatorCount}">
+                  <option value="">Nenhum</option>
+                  ${sensorOptions || '<option value="">Adicione sensores primeiro</option>'}
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+      `
+      document.getElementById('actuatorsContainer').insertAdjacentHTML('beforeend', actuatorHtml)
+    }
+
+    // Remover Atuador
+    function removeActuator(id) {
+      document.getElementById(`actuator-${id}`).remove()
+    }
+
+    // Carregar dispositivos
     async function loadDevices() {
       const loading = document.getElementById('loading')
       const deviceList = document.getElementById('deviceList')
@@ -173,7 +352,6 @@
                   ${device.status}
                 </span>
               </div>
-              
               <p class="text-muted mb-1">
                 <i class="fas fa-map-marker-alt"></i> ${device.location || 'Sem localização'}
               </p>
@@ -194,18 +372,63 @@
       `).join('')
     }
 
+    // Criar dispositivo
     async function createDevice() {
       const form = document.getElementById('createDeviceForm')
       const formData = new FormData(form)
       
+      // Validar campos obrigatórios
+      if (!form.checkValidity()) {
+        form.reportValidity()
+        return
+      }
+
+      // Coletar sensores
+      const sensors = []
+      const sensorElements = document.querySelectorAll('.sensor-item')
+      sensorElements.forEach((el, index) => {
+        const id = el.id.split('-')[1]
+        const sensorId = formData.get(`sensor_id_${id}`)
+        if (sensorId) {
+          sensors.push({
+            sensor_id: sensorId,
+            sensor_name: formData.get(`sensor_name_${id}`),
+            type: formData.get(`sensor_type_${id}`),
+            pin: formData.get(`sensor_pin_${id}`),
+            threshold: parseInt(formData.get(`sensor_threshold_${id}`)) || 30
+          })
+        }
+      })
+
+      // Coletar atuadores
+      const actuators = []
+      const actuatorElements = document.querySelectorAll('.actuator-item')
+      actuatorElements.forEach((el, index) => {
+        const id = el.id.split('-')[1]
+        const actuatorId = formData.get(`actuator_id_${id}`)
+        if (actuatorId) {
+          actuators.push({
+            actuator_id: actuatorId,
+            actuator_name: formData.get(`actuator_name_${id}`),
+            type: formData.get(`actuator_type_${id}`),
+            gpio_pin: parseInt(formData.get(`actuator_gpio_${id}`)),
+            linked_sensor: formData.get(`actuator_linked_sensor_${id}`) || null
+          })
+        }
+      })
+
+      // Montar payload
       const payload = {
         device_id: formData.get('device_id'),
         device_name: formData.get('device_name'),
-        location: formData.get('location'),
+        location: formData.get('location') || '',
+        description: formData.get('description') || '',
+        sensors: sensors,
+        actuators: actuators,
         configuration: {
           threshold: parseInt(formData.get('threshold')) || 30,
-          auto_mode: true,
-          sampling_interval: 10
+          auto_mode: formData.get('auto_mode') === 'on',
+          sampling_interval: parseInt(formData.get('sampling_interval')) || 10
         }
       }
 
@@ -223,8 +446,14 @@
         const createModal = bootstrap.Modal.getInstance(document.getElementById('createDeviceModal'))
         createModal.hide()
         
-        // Recarregar lista
+        // Resetar formulário
         form.reset()
+        document.getElementById('sensorsContainer').innerHTML = ''
+        document.getElementById('actuatorsContainer').innerHTML = ''
+        sensorCount = 0
+        actuatorCount = 0
+        
+        // Recarregar lista
         await loadDevices()
       } catch (error) {
         alert('Erro ao criar dispositivo: ' + error.message)
@@ -237,6 +466,15 @@
       document.execCommand('copy')
       alert('Copiado para área de transferência!')
     }
+
+    // Resetar formulário ao fechar modal
+    document.getElementById('createDeviceModal').addEventListener('hidden.bs.modal', function () {
+      document.getElementById('createDeviceForm').reset()
+      document.getElementById('sensorsContainer').innerHTML = ''
+      document.getElementById('actuatorsContainer').innerHTML = ''
+      sensorCount = 0
+      actuatorCount = 0
+    })
 
     // Carregar ao abrir a página
     loadDevices()
