@@ -81,9 +81,16 @@
               <span id="thresholdValue" class="fw-bold">30%</span>
               <span>100%</span>
             </div>
-            <button class="btn btn-success w-100 mt-3" onclick="updateThreshold()">
-              <i class="fas fa-save"></i> Aplicar Threshold
+            <button 
+              class="btn btn-success w-100 mt-3" 
+              id="applyThresholdBtn" 
+              onclick="updateThreshold()" 
+              disabled>
+              <i class="fas fa-save"></i> Atualizar Threshold
             </button>
+            <small class="text-muted d-block mt-2">
+              <i class="fas fa-info-circle"></i> Altere o valor acima para habilitar o botão
+            </small>
           </div>
         </div>
       </div>
@@ -94,12 +101,25 @@
             <h5 class="mb-0"><i class="fas fa-hand-paper"></i> Controle Manual</h5>
           </div>
           <div class="card-body">
-            <p class="text-muted">Abrir/fechar válvula manualmente (desativa modo automático)</p>
+            <!-- Status Atual da Válvula -->
+            <div class="alert alert-info mb-3" id="valveStatusAlert">
+              <div class="d-flex align-items-center">
+                <i class="fas fa-faucet fa-2x me-3"></i>
+                <div>
+                  <strong>Status Atual:</strong>
+                  <h4 class="mb-0 mt-1">
+                    <span class="badge bg-secondary" id="currentValveState">--</span>
+                  </h4>
+                </div>
+              </div>
+            </div>
+
+            <p class="text-muted small">Abrir/fechar válvula manualmente (desativa modo automático)</p>
             <div class="d-grid gap-2">
-              <button class="btn btn-primary btn-lg" onclick="controlValve('OPEN')">
+              <button class="btn btn-primary btn-lg" onclick="controlValve('OPEN')" id="openValveBtn">
                 <i class="fas fa-unlock"></i> Abrir Válvula
               </button>
-              <button class="btn btn-secondary btn-lg" onclick="controlValve('CLOSED')">
+              <button class="btn btn-secondary btn-lg" onclick="controlValve('CLOSED')" id="closeValveBtn">
                 <i class="fas fa-lock"></i> Fechar Válvula
               </button>
             </div>
@@ -179,11 +199,25 @@
     const deviceId = urlParams.get('id')
     let device = null
     let statusInterval = null
+    let originalThreshold = 30 // Armazena threshold original
+    let currentValveState = null // Armazena estado atual da válvula
 
     async function loadDevice() {
       try {
         device = await API.getDevice(deviceId)
         document.getElementById('deviceTitle').textContent = device.device_name
+        
+        // Pegar threshold do shadow (se existir)
+        if (device.shadow && device.shadow.desired && device.shadow.desired.threshold) {
+          originalThreshold = device.shadow.desired.threshold
+        } else if (device.configuration && device.configuration.threshold) {
+          originalThreshold = device.configuration.threshold
+        }
+        
+        // Atualizar slider com threshold atual
+        const slider = document.getElementById('thresholdSlider')
+        slider.value = originalThreshold
+        document.getElementById('thresholdValue').textContent = originalThreshold + '%'
         
         // Preencher form de edição
         document.getElementById('editName').value = device.device_name
@@ -208,12 +242,17 @@
         const status = await API.getStatus(deviceId)
         const reading = status.current_status
         
+        // Atualizar cards de status
         document.getElementById('moisture').textContent = reading.soil_moisture.toFixed(1)
         document.getElementById('valveState').textContent = reading.valve_state
         document.getElementById('threshold').textContent = reading.threshold || '--'
         
         const date = new Date(reading.timestamp)
         document.getElementById('lastUpdate').textContent = date.toLocaleString('pt-BR')
+        
+        // Atualizar status da válvula no controle manual
+        currentValveState = reading.valve_state
+        updateValveStatusDisplay(reading.valve_state)
         
         loading.style.display = 'none'
         content.style.display = 'block'
@@ -225,39 +264,110 @@
       }
     }
 
-    // Slider de threshold
+    // Atualizar display do status da válvula
+    function updateValveStatusDisplay(state) {
+      const badge = document.getElementById('currentValveState')
+      const alert = document.getElementById('valveStatusAlert')
+      const openBtn = document.getElementById('openValveBtn')
+      const closeBtn = document.getElementById('closeValveBtn')
+      
+      if (state === 'OPEN') {
+        badge.textContent = 'ABERTA'
+        badge.className = 'badge bg-primary'
+        alert.className = 'alert alert-primary mb-3'
+        
+        // Desabilitar botão "Abrir" se já estiver aberta
+        openBtn.disabled = true
+        closeBtn.disabled = false
+      } else {
+        badge.textContent = 'FECHADA'
+        badge.className = 'badge bg-secondary'
+        alert.className = 'alert alert-secondary mb-3'
+        
+        // Desabilitar botão "Fechar" se já estiver fechada
+        openBtn.disabled = false
+        closeBtn.disabled = true
+      }
+    }
+
+    // Slider de threshold com detecção de mudança
     const slider = document.getElementById('thresholdSlider')
     const valueDisplay = document.getElementById('thresholdValue')
+    const applyBtn = document.getElementById('applyThresholdBtn')
+    
     slider.addEventListener('input', (e) => {
-      valueDisplay.textContent = e.target.value + '%'
+      const newValue = parseInt(e.target.value)
+      valueDisplay.textContent = newValue + '%'
+      
+      // Habilitar botão apenas se o valor mudou
+      if (newValue !== originalThreshold) {
+        applyBtn.disabled = false
+        applyBtn.classList.remove('btn-success')
+        applyBtn.classList.add('btn-warning')
+      } else {
+        applyBtn.disabled = true
+        applyBtn.classList.remove('btn-warning')
+        applyBtn.classList.add('btn-success')
+      }
     })
 
     async function updateThreshold() {
       const value = parseInt(slider.value)
       
       try {
+        applyBtn.disabled = true
+        applyBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Aplicando...'
+        
         await API.controlDevice(deviceId, {
           threshold: value,
           auto_mode: true
         })
-        alert('Threshold atualizado com sucesso!')
+        
+        originalThreshold = value // Atualizar threshold original
+        applyBtn.innerHTML = '<i class="fas fa-check"></i> Atualizado!'
+        applyBtn.classList.remove('btn-warning')
+        applyBtn.classList.add('btn-success')
+        
+        setTimeout(() => {
+          applyBtn.innerHTML = '<i class="fas fa-save"></i> Atualizar Threshold'
+          applyBtn.disabled = true
+        }, 2000)
+        
         loadStatus()
       } catch (error) {
+        applyBtn.innerHTML = '<i class="fas fa-save"></i> Atualizar Threshold'
+        applyBtn.disabled = false
         alert('Erro ao atualizar threshold: ' + error.message)
       }
     }
 
     async function controlValve(state) {
-      if (!confirm(`Deseja ${state === 'OPEN' ? 'abrir' : 'fechar'} a válvula manualmente?`)) return
+      const action = state === 'OPEN' ? 'abrir' : 'fechar'
+      if (!confirm(`Deseja ${action} a válvula manualmente?\n\nIsso desativará o modo automático.`)) return
+      
+      const btnId = state === 'OPEN' ? 'openValveBtn' : 'closeValveBtn'
+      const btn = document.getElementById(btnId)
+      const originalText = btn.innerHTML
       
       try {
+        btn.disabled = true
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...'
+        
         await API.controlDevice(deviceId, {
           valve_override: state,
           auto_mode: false
         })
-        alert('Comando enviado com sucesso!')
-        loadStatus()
+        
+        btn.innerHTML = '<i class="fas fa-check"></i> Comando enviado!'
+        
+        setTimeout(() => {
+          btn.innerHTML = originalText
+          loadStatus()
+        }, 2000)
+        
       } catch (error) {
+        btn.innerHTML = originalText
+        btn.disabled = false
         alert('Erro ao controlar válvula: ' + error.message)
       }
     }
