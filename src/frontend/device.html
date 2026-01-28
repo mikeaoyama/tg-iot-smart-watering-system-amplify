@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Detalhes do Dispositivo</title>
+  
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <nav class="navbar navbar-dark bg-success">
+    <div class="container">
+      <a class="navbar-brand" href="index.html">
+        <i class="fas fa-arrow-left"></i> Voltar
+      </a>
+      <span class="navbar-text text-white" id="deviceTitle">Carregando...</span>
+    </div>
+  </nav>
+
+  <div class="container my-4">
+    <!-- Status em Tempo Real -->
+    <div class="card mb-4">
+      <div class="card-header bg-success text-white">
+        <h5 class="mb-0"><i class="fas fa-chart-line"></i> Status em Tempo Real</h5>
+      </div>
+      <div class="card-body">
+        <div id="statusLoading" class="text-center">
+          <div class="spinner-border text-success" role="status"></div>
+        </div>
+        
+        <div id="statusContent" style="display: none;">
+          <div class="row text-center">
+            <div class="col-md-4">
+              <div class="p-3 border rounded">
+                <i class="fas fa-tint fa-3x text-info mb-2"></i>
+                <h3 id="moisture" class="mb-0">--</h3>
+                <p class="text-muted">Umidade do Solo (%)</p>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="p-3 border rounded">
+                <i class="fas fa-faucet fa-3x text-primary mb-2"></i>
+                <h3 id="valveState" class="mb-0">--</h3>
+                <p class="text-muted">Estado da Válvula</p>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="p-3 border rounded">
+                <i class="fas fa-crosshairs fa-3x text-warning mb-2"></i>
+                <h3 id="threshold" class="mb-0">--</h3>
+                <p class="text-muted">Threshold (%)</p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="text-muted text-center mt-3">
+            <small>Última atualização: <span id="lastUpdate">--</span></small>
+          </div>
+        </div>
+
+        <div id="statusError" style="display: none;" class="alert alert-warning">
+          <i class="fas fa-exclamation-triangle"></i> Nenhum dado disponível ainda. Aguardando leituras do sensor...
+        </div>
+      </div>
+    </div>
+
+    <!-- Controle Manual -->
+    <div class="row mb-4">
+      <div class="col-md-6">
+        <div class="card h-100">
+          <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-sliders-h"></i> Controle de Threshold</h5>
+          </div>
+          <div class="card-body">
+            <label class="form-label">Threshold de Umidade (%)</label>
+            <input type="range" class="form-range" id="thresholdSlider" min="0" max="100" value="30">
+            <div class="d-flex justify-content-between">
+              <span>0%</span>
+              <span id="thresholdValue" class="fw-bold">30%</span>
+              <span>100%</span>
+            </div>
+            <button class="btn btn-success w-100 mt-3" onclick="updateThreshold()">
+              <i class="fas fa-save"></i> Aplicar Threshold
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <div class="card h-100">
+          <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-hand-paper"></i> Controle Manual</h5>
+          </div>
+          <div class="card-body">
+            <p class="text-muted">Abrir/fechar válvula manualmente (desativa modo automático)</p>
+            <div class="d-grid gap-2">
+              <button class="btn btn-primary btn-lg" onclick="controlValve('OPEN')">
+                <i class="fas fa-unlock"></i> Abrir Válvula
+              </button>
+              <button class="btn btn-secondary btn-lg" onclick="controlValve('CLOSED')">
+                <i class="fas fa-lock"></i> Fechar Válvula
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Ações -->
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-cog"></i> Ações</h5>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <button class="btn btn-info w-100" onclick="viewHistory()">
+              <i class="fas fa-chart-area"></i> Ver Histórico
+            </button>
+          </div>
+          <div class="col-md-4">
+            <button class="btn btn-warning w-100" data-bs-toggle="modal" data-bs-target="#editModal">
+              <i class="fas fa-edit"></i> Editar Dispositivo
+            </button>
+          </div>
+          <div class="col-md-4">
+            <button class="btn btn-danger w-100" onclick="confirmDelete()">
+              <i class="fas fa-trash"></i> Excluir Dispositivo
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Editar -->
+  <div class="modal fade" id="editModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Editar Dispositivo</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form id="editForm">
+            <div class="mb-3">
+              <label class="form-label">Nome</label>
+              <input type="text" class="form-control" name="device_name" id="editName">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Localização</label>
+              <input type="text" class="form-control" name="location" id="editLocation">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Status</label>
+              <select class="form-select" name="status" id="editStatus">
+                <option value="active">Ativo</option>
+                <option value="inactive">Inativo</option>
+              </select>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-warning" onclick="saveEdit()">Salvar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  
+  <script>
+    const urlParams = new URLSearchParams(window.location.search)
+    const deviceId = urlParams.get('id')
+    let device = null
+    let statusInterval = null
+
+    async function loadDevice() {
+      try {
+        device = await API.getDevice(deviceId)
+        document.getElementById('deviceTitle').textContent = device.device_name
+        
+        // Preencher form de edição
+        document.getElementById('editName').value = device.device_name
+        document.getElementById('editLocation').value = device.location || ''
+        document.getElementById('editStatus').value = device.status
+        
+        loadStatus()
+        // Atualizar a cada 10 segundos
+        statusInterval = setInterval(loadStatus, 10000)
+      } catch (error) {
+        alert('Erro ao carregar dispositivo: ' + error.message)
+        window.location.href = 'index.html'
+      }
+    }
+
+    async function loadStatus() {
+      const loading = document.getElementById('statusLoading')
+      const content = document.getElementById('statusContent')
+      const error = document.getElementById('statusError')
+      
+      try {
+        const status = await API.getStatus(deviceId)
+        const reading = status.current_status
+        
+        document.getElementById('moisture').textContent = reading.soil_moisture.toFixed(1)
+        document.getElementById('valveState').textContent = reading.valve_state
+        document.getElementById('threshold').textContent = reading.threshold || '--'
+        
+        const date = new Date(reading.timestamp)
+        document.getElementById('lastUpdate').textContent = date.toLocaleString('pt-BR')
+        
+        loading.style.display = 'none'
+        content.style.display = 'block'
+        error.style.display = 'none'
+      } catch (err) {
+        loading.style.display = 'none'
+        content.style.display = 'none'
+        error.style.display = 'block'
+      }
+    }
+
+    // Slider de threshold
+    const slider = document.getElementById('thresholdSlider')
+    const valueDisplay = document.getElementById('thresholdValue')
+    slider.addEventListener('input', (e) => {
+      valueDisplay.textContent = e.target.value + '%'
+    })
+
+    async function updateThreshold() {
+      const value = parseInt(slider.value)
+      
+      try {
+        await API.controlDevice(deviceId, {
+          threshold: value,
+          auto_mode: true
+        })
+        alert('Threshold atualizado com sucesso!')
+        loadStatus()
+      } catch (error) {
+        alert('Erro ao atualizar threshold: ' + error.message)
+      }
+    }
+
+    async function controlValve(state) {
+      if (!confirm(`Deseja ${state === 'OPEN' ? 'abrir' : 'fechar'} a válvula manualmente?`)) return
+      
+      try {
+        await API.controlDevice(deviceId, {
+          valve_override: state,
+          auto_mode: false
+        })
+        alert('Comando enviado com sucesso!')
+        loadStatus()
+      } catch (error) {
+        alert('Erro ao controlar válvula: ' + error.message)
+      }
+    }
+
+    async function saveEdit() {
+      const form = document.getElementById('editForm')
+      const formData = new FormData(form)
+      
+      const payload = {
+        device_name: formData.get('device_name'),
+        location: formData.get('location'),
+        status: formData.get('status')
+      }
+      
+      try {
+        await API.updateDevice(deviceId, payload)
+        alert('Dispositivo atualizado!')
+        
+        const modal = bootstrap.Modal.getInstance(document.getElementById('editModal'))
+        modal.hide()
+        
+        loadDevice()
+      } catch (error) {
+        alert('Erro ao atualizar: ' + error.message)
+      }
+    }
+
+    async function confirmDelete() {
+      if (!confirm('Tem certeza que deseja excluir este dispositivo? Esta ação não pode ser desfeita!')) return
+      
+      try {
+        await API.deleteDevice(deviceId)
+        alert('Dispositivo excluído com sucesso!')
+        window.location.href = 'index.html'
+      } catch (error) {
+        alert('Erro ao excluir: ' + error.message)
+      }
+    }
+
+    function viewHistory() {
+      window.location.href = `history.html?id=${deviceId}`
+    }
+
+    // Limpar interval ao sair da página
+    window.addEventListener('beforeunload', () => {
+      if (statusInterval) clearInterval(statusInterval)
+    })
+
+    loadDevice()
+  </script>
+</body>
+</html>
